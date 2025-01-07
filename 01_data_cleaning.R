@@ -51,4 +51,4 @@ full_table <- read.csv("Data/Data_Extraction_Table.csv", header = T, check.names
   mutate_at(c("n_pulses", "time_before_T", "time_increase_T", 
               "time_max_T", "time_cooldown", "time_recovery"),
             ~replace_na(., "NAp"))
-
+#test
