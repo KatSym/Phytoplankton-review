@@ -5,6 +5,7 @@
 library(tidyverse)
 library(CoordinateCleaner)
 
+
 full_table <- read.csv("Data/Data_Extraction_Table.csv", header = T, check.names = F) %>% 
   janitor::clean_names() %>% 
   
@@ -42,7 +43,8 @@ full_table <- read.csv("Data/Data_Extraction_Table.csv", header = T, check.names
   filter(country != "",
          lat != "",
          long != "") %>% 
-  
+  filter(multi_season != "",
+         multi_year != "") %>% 
   # fix comments and weird 'x' column
   mutate(Comments = case_when(comments == "" ~ x,
                               .default = comments),
