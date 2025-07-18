@@ -1,3 +1,5 @@
+library(tidyverse)
+
 data <- read.csv("Data/Data_extraction_table-changes_20250630.csv", header = T, check.names = F) %>% 
   janitor::clean_names() %>% 
   
@@ -86,10 +88,12 @@ data <- read.csv("Data/Data_extraction_table-changes_20250630.csv", header = T, 
                                    macroinvertebrates == "Not specified" ~ NA),
     benthic = rowSums(pick(sediment, macrophytes, macroinvertebrates), na.rm = T),
     all_trophic = neritic + benthic,
-    .keep = "unused") |> 
-  select(-c(phyto, zoo, fish, sediment, macrophytes, macroinvertebrates, d_temp_control_treatment_c_value))
+    .keep = "unused") 
+  select(-c( d_temp_control_treatment_c_valuephyto, 
+             # zoo, fish, sediment, macrophytes, macroinvertebrates
+             ))
 
-
+# group and summarize everything by study -> don't do for later analysis
 plot.dat <- data |> 
   group_by(rayyan_id) |> 
   summarize(nhits = n(),
@@ -99,6 +103,7 @@ plot.dat <- data |>
   mutate(disturbance = ifelse(disturbance == 1.5, 3, disturbance)) |> 
   ungroup()
 
+# mesocosm type plot
 plot.dat |> 
   group_by(mesocosm_type) |> 
   summarise(n.studies = n()) |> 
@@ -112,7 +117,7 @@ plot.dat |>
   theme_minimal()
 # ggsave("output/plots/mesoc_type.png", bg ="white")
 
-
+# system plot
 plot.dat |> 
   group_by(system_gr) |> 
   summarise(n.studies = n()) |> 
@@ -126,6 +131,7 @@ plot.dat |>
   theme_minimal()
 # ggsave("output/plots/system.png", bg ="white")
 
+# multi-year/season and stratification
 mseas <- plot.dat |> 
   group_by(multi_season) |> 
   summarise(n.seas = n()) |> 
@@ -158,6 +164,7 @@ ggplot(aes(x = n.studies,
 # ggsave("output/plots/type.png", bg ="white")
 
 
+# additional treatments
 plot.dat |> 
   group_by(addit_treat) |> 
   summarise(n.studies = n()) |> 
@@ -169,14 +176,14 @@ plot.dat |>
   theme_minimal()
 # ggsave("output/plots/additional_treat.png", bg ="white")
 
-
+# "trophic" levels
+# maybe use Venn diagram instead
 plot.dat |> 
   select(neritic, benthic, all_trophic) |> 
   pivot_longer(cols = c(neritic, benthic, all_trophic), names_to = "trophic_sys", values_to = "levels") |> 
   group_by(trophic_sys, levels) |> 
   summarise(n.studies = n()) |> 
   ungroup() |> 
-
   ggplot(aes(x = n.studies, 
              y = factor(levels),
              fill = trophic_sys)) +
@@ -190,9 +197,31 @@ plot.dat |>
 # ggsave("output/plots/trophic_levels.png", bg ="white")
 
 
-table(plot.dat$neritic)
+# try Venn
+x <- list(
+  phyto = which(data$phyto == "1"),
+  zoo = which(data$zoo == "1"), 
+  fish = which(data$fish == "1"),
+  sediment = which(data$sediment == "1"),
+  macrophytes = which(data$macrophytes == "1"),
+  macroinvertebrates = which(data$macroinvertebrates == "1"))
+
+library(ggVennDiagram)
+ggVennDiagram(x, label = "count", label_alpha = 0, edge_size = 0,
+              label_size = 3, set_size = 3,
+              category.names = c("Phyto", "zoo", 
+                                 "fish", "sed", "macrphy", "marcinvert")) +
+  labs(fill = "experiments", title = "food web components") +
+  scale_fill_gradient(low = rgb(0.8, 0.8, 0.8), 
+                      high = rgb(0.4, 0.4, 0.4), trans = 'sqrt') +
+  
+  scale_color_manual(values = c("grey30", "grey30", 
+                                "grey30", "grey30", 
+                                "grey30"))
 
 
+
+# incubation volume - NEEDS CHECKING!!
 plot.dat |> 
   group_by(incubation_vol_l) |> 
   summarise(n.studies = n()) |> 
@@ -208,9 +237,9 @@ scale_discrete_manual(aesthetics = "fill",
   theme_minimal()
 
 hist(plot.dat$incubation_vol_l, nclass = 67)
-hist(plot.dat$d.T, nclass = 38)
 
 
+# delta temperature
 plot.dat |> 
   ggplot(aes(x = d.T)) +
   geom_histogram(bins=38)+
@@ -218,7 +247,7 @@ plot.dat |>
   theme_minimal()
 # ggsave("output/plots/d_temp.png", bg ="white")
 
-
+# disturbance type
 plot.dat |> 
   mutate(disturbance = case_when(disturbance == 1 ~ "pulse",
                                  disturbance == 2 ~ "press",
